@@ -1,0 +1,119 @@
+# TP NetOps — MPLS L3VPN (J1)
+# 13 conteneurs : 9 cEOS + 4 hôtes Linux
+#
+# Filiale A (TENANT_1) : Paris + Avignon
+# Filiale B (TENANT_2) : Paris + Bordeaux
+#
+# 3 PE (une par ville) : Paris accueille les deux filiales sur le même PE, VRF distinctes.
+# 4 CE + 4 hôtes (une agence = un CE + un host).
+# 2 P : p1 (RR iBGP AS 65000) et p2.
+#
+# Déploiement :
+#   sudo containerlab deploy -t topology.clab.yml
+# Destruction :
+#   sudo containerlab destroy -t topology.clab.yml --cleanup
+#
+# Image cEOS : importer l'archive Arista, ex.
+#   docker import cEOS64-lab-4.32.0F.tar.xz ceos:4.36.1F
+
+name: netops
+
+mgmt:
+  network: netops-mgmt
+  ipv4-subnet: 172.20.20.0/24
+
+topology:
+  kinds:
+    arista_ceos:
+      image: ceos:4.36.1F
+    linux:
+      image: alpine:3.20.3
+
+  nodes:
+    # --- Cœur MPLS (P) ---
+    p1:
+      kind: arista_ceos
+      group: core
+      mgmt-ipv4: 172.20.20.11
+    p2:
+      kind: arista_ceos
+      group: core
+      mgmt-ipv4: 172.20.20.12
+
+    # --- PE ---
+    pe-paris:
+      kind: arista_ceos
+      group: pe
+      mgmt-ipv4: 172.20.20.21
+    pe-avignon:
+      kind: arista_ceos
+      group: pe
+      mgmt-ipv4: 172.20.20.22
+    pe-bordeaux:
+      kind: arista_ceos
+      group: pe
+      mgmt-ipv4: 172.20.20.23
+
+    # --- CE filiale A (TENANT_1) ---
+    ce-paris-a:
+      kind: arista_ceos
+      group: ce
+      mgmt-ipv4: 172.20.20.31
+    ce-avignon:
+      kind: arista_ceos
+      group: ce
+      mgmt-ipv4: 172.20.20.32
+
+    # --- CE filiale B (TENANT_2) ---
+    ce-paris-b:
+      kind: arista_ceos
+      group: ce
+      mgmt-ipv4: 172.20.20.33
+    ce-bordeaux:
+      kind: arista_ceos
+      group: ce
+      mgmt-ipv4: 172.20.20.34
+
+    # --- Hôtes d'agence ---
+    host-paris-a:
+      kind: linux
+      group: host
+      mgmt-ipv4: 172.20.20.41
+      cmd: sleep infinity
+    host-avignon:
+      kind: linux
+      group: host
+      mgmt-ipv4: 172.20.20.42
+      cmd: sleep infinity
+    host-paris-b:
+      kind: linux
+      group: host
+      mgmt-ipv4: 172.20.20.43
+      cmd: sleep infinity
+    host-bordeaux:
+      kind: linux
+      group: host
+      mgmt-ipv4: 172.20.20.44
+      cmd: sleep infinity
+
+  links:
+    # Cœur : P dual-homés + PE dual-homés (OSPF aire 0 + LDP)
+    - endpoints: ["p1:eth1", "p2:eth1"]
+    - endpoints: ["p1:eth2", "pe-paris:eth1"]
+    - endpoints: ["p1:eth3", "pe-avignon:eth1"]
+    - endpoints: ["p1:eth4", "pe-bordeaux:eth1"]
+    - endpoints: ["p2:eth2", "pe-paris:eth2"]
+    - endpoints: ["p2:eth3", "pe-avignon:eth2"]
+    - endpoints: ["p2:eth4", "pe-bordeaux:eth2"]
+
+    # Bordure PE–CE (eBGP) — Paris : deux VRF sur le même PE
+    - endpoints: ["pe-paris:eth3", "ce-paris-a:eth1"]
+    - endpoints: ["pe-paris:eth4", "ce-paris-b:eth1"]
+    - endpoints: ["pe-avignon:eth3", "ce-avignon:eth1"]
+    - endpoints: ["pe-bordeaux:eth3", "ce-bordeaux:eth1"]
+
+    # LAN agence CE–hôte
+    - endpoints: ["ce-paris-a:eth2", "host-paris-a:eth1"]
+    - endpoints: ["ce-avignon:eth2", "host-avignon:eth1"]
+    - endpoints: ["ce-paris-b:eth2", "host-paris-b:eth1"]
+    - endpoints: ["ce-bordeaux:eth2", "host-bordeaux:eth1"]
