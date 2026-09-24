@@ -1,0 +1,29 @@
+---
+- name: Vérifier le sous-jacent OSPF
+  hosts: arista_ceos
+  gather_facts: false
+  any_errors_fatal: true
+
+  tasks:
+    - name: Lire les voisinages et les routes OSPF
+      arista.eos.eos_command:
+        commands:
+          - show ip ospf neighbor state full
+          - show ip route ospf
+      register: ospf_check
+      when: node_role | default('') in ['p', 'pe']
+
+    - name: Vérifier le nombre de voisinages OSPF complets
+      ansible.builtin.assert:
+        that:
+          - >
+            (ospf_check.stdout[0] | regex_findall('FULL/') | length)
+            == expected_ospf_neighbors
+        fail_msg: >-
+          {{ inventory_hostname }} : nombre de voisins OSPF FULL incorrect.
+      when: node_role | default('') in ['p', 'pe']
+
+    - name: Afficher les voisinages OSPF
+      ansible.builtin.debug:
+        msg: "{{ ospf_check.stdout[0] }}"
+      when: node_role | default('') in ['p', 'pe']

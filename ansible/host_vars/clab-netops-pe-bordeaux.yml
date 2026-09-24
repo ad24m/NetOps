@@ -1,0 +1,11 @@
+---
+node_role: pe
+router_id: 10.255.0.23
+loopback0: 10.255.0.23/32
+
+ospf_interfaces:
+  - name: Ethernet1
+    address: 10.0.0.7/31
+  - name: Ethernet2
+    address: 10.0.0.13/31
+expected_ospf_neighbors: 2

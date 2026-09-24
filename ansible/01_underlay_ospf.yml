@@ -1,0 +1,41 @@
+---
+- name: Configurer le socle OSPF du cœur MPLS
+  hosts: arista_ceos
+  gather_facts: false
+  any_errors_fatal: true
+
+  tasks:
+    - name: Activer le routage IP sur les routeurs du cœur
+      arista.eos.eos_config:
+        lines:
+          - ip routing
+        save_when: changed
+      when: node_role | default('') in ['p', 'pe']
+
+    - name: Configurer le processus OSPF
+      arista.eos.eos_config:
+        parents: "router ospf {{ ospf_process_id }}"
+        lines:
+          - "router-id {{ router_id }}"
+        save_when: changed
+      when: node_role | default('') in ['p', 'pe']
+
+    - name: Configurer la loopback OSPF
+      arista.eos.eos_config:
+        parents: interface Loopback0
+        lines:
+          - "ip address {{ loopback0 }}"
+          - "ip ospf area {{ ospf_area }}"
+        save_when: changed
+      when: node_role | default('') in ['p', 'pe']
+
+    - name: Configurer les liens OSPF du cœur
+      arista.eos.eos_config:
+        parents: "interface {{ item.name }}"
+        lines:
+          - no switchport
+          - "ip address {{ item.address }}"
+          - "ip ospf area {{ ospf_area }}"
+        save_when: changed
+      loop: "{{ ospf_interfaces | default([]) }}"
+      when: node_role | default('') in ['p', 'pe']

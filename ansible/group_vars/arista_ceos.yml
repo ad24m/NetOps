@@ -6,3 +6,7 @@ ansible_httpapi_validate_certs: false
 ansible_httpapi_port: 443
 ansible_user: admin
 ansible_password: admin
+ospf_process_id: 1
+ospf_area: 0.0.0.0
+ansible_become: true
+ansible_become_method: enable
