@@ -1,0 +1,17 @@
+---
+- name: Tester la connexion eAPI aux routeurs Arista
+  hosts: arista_ceos
+  gather_facts: false
+  any_errors_fatal: true
+
+  tasks:
+    - name: Lire le nom de chaque routeur
+      arista.eos.eos_command:
+        commands:
+          - show hostname
+      register: hostname_result
+
+    - name: Afficher le résultat
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }} -> {{ hostname_result.stdout[0] }}"
+
