@@ -1,0 +1,5 @@
+---
+- import_playbook: 02_check_ospf.yml
+- import_playbook: 04_check_ldp.yml
+- import_playbook: 06_check_mpbpg_vpnv4.yml
+- import_playbook: 10_check_l3vpn.yml
