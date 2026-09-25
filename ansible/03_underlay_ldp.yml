@@ -1,0 +1,22 @@
+---
+- name: Configurer MPLS et LDP dans le cœur
+  hosts: arista_ceos
+  gather_facts: false
+  any_errors_fatal: true
+
+  tasks:
+    - name: Activer MPLS IP sur les routeurs du cœur
+      arista.eos.eos_config:
+        lines:
+          - mpls ip
+        save_when: changed
+      when: node_role | default('') in ['p', 'pe']
+
+    - name: Configurer LDP avec la Loopback0 comme identifiant
+      arista.eos.eos_config:
+        parents: mpls ldp
+        lines:
+          - router-id interface Loopback0
+          - no shutdown
+        save_when: changed
+      when: node_role | default('') in ['p', 'pe']

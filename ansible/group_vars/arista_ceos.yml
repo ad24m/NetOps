@@ -10,3 +10,4 @@ ospf_process_id: 1
 ospf_area: 0.0.0.0
 ansible_become: true
 ansible_become_method: enable
+bgp_as: 65000

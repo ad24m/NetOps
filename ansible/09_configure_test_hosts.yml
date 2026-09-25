@@ -1,0 +1,31 @@
+---
+- name: Configurer les hôtes de test des VPN
+  hosts: linux
+  gather_facts: false
+  any_errors_fatal: true
+
+  tasks:
+    - name: Configurer l'adresse LAN et la route vers le site distant
+      ansible.builtin.raw: |
+        set -e
+        changed=0
+
+        ip link set {{ test_host_interface }} up
+
+        if ! ip addr show dev {{ test_host_interface }} | grep -Fq 'inet {{ test_host_ip }}'; then
+          ip addr add {{ test_host_ip }} dev {{ test_host_interface }}
+          changed=1
+        fi
+
+        if ! ip route | grep -Fq '{{ remote_lan }} via {{ ce_gateway }} dev {{ test_host_interface }}'; then
+          ip route replace {{ remote_lan }} via {{ ce_gateway }} dev {{ test_host_interface }}
+          changed=1
+        fi
+
+        if [ "$changed" -eq 1 ]; then
+          echo ANSIBLE_CHANGED
+        else
+          echo ANSIBLE_OK
+        fi
+      register: host_network_result
+      changed_when: "'ANSIBLE_CHANGED' in host_network_result.stdout"

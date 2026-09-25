@@ -1,0 +1,69 @@
+---
+- name: Créer les VRF clientes sur les PE
+  hosts: arista_ceos
+  gather_facts: false
+  any_errors_fatal: true
+
+  vars:
+    pe_vrfs:
+      clab-netops-pe-paris:
+        - name: TENANT_1
+          interface: Ethernet3
+          rd: "65000:101"
+          rt: "65000:1"
+        - name: TENANT_2
+          interface: Ethernet4
+          rd: "65000:201"
+          rt: "65000:2"
+
+      clab-netops-pe-avignon:
+        - name: TENANT_1
+          interface: Ethernet3
+          rd: "65000:102"
+          rt: "65000:1"
+
+      clab-netops-pe-bordeaux:
+        - name: TENANT_2
+          interface: Ethernet3
+          rd: "65000:202"
+          rt: "65000:2"
+
+  tasks:
+    - name: Créer les instances VRF
+      arista.eos.eos_config:
+        lines:
+          - "vrf instance {{ item.name }}"
+        save_when: changed
+      loop: "{{ pe_vrfs[inventory_hostname] | default([]) }}"
+      when: node_role | default('') == 'pe'
+
+    - name: Activer le routage dans chaque VRF
+      arista.eos.eos_config:
+        lines:
+          - "ip routing vrf {{ item.name }}"
+        save_when: changed
+      loop: "{{ pe_vrfs[inventory_hostname] | default([]) }}"
+      when: node_role | default('') == 'pe'
+
+    - name: Raccorder l'interface CE à sa VRF
+      arista.eos.eos_config:
+        parents: "interface {{ item.interface }}"
+        lines:
+          - "no switchport"
+          - "vrf {{ item.name }}"
+        save_when: changed
+      loop: "{{ pe_vrfs[inventory_hostname] | default([]) }}"
+      when: node_role | default('') == 'pe'
+
+    - name: Configurer RD et RT dans BGP
+      arista.eos.eos_config:
+        parents:
+          - "router bgp {{ bgp_as }}"
+          - "vrf {{ item.name }}"
+        lines:
+          - "rd {{ item.rd }}"
+          - "route-target import vpn-ipv4 {{ item.rt }}"
+          - "route-target export vpn-ipv4 {{ item.rt }}"
+        save_when: changed
+      loop: "{{ pe_vrfs[inventory_hostname] | default([]) }}"
+      when: node_role | default('') == 'pe'

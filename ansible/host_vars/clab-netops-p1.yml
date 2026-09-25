@@ -13,3 +13,7 @@ ospf_interfaces:
   - name: Ethernet4
     address: 10.0.0.6/31
 expected_ospf_neighbors: 4
+bgp_rr_clients:
+  - 10.255.0.21
+  - 10.255.0.22
+  - 10.255.0.23

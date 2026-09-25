@@ -1,0 +1,29 @@
+---
+- name: Vérifier les sessions MP-BGP VPNv4
+  hosts: arista_ceos
+  gather_facts: false
+  any_errors_fatal: true
+
+  tasks:
+    - name: Lire l'état des voisins BGP VPNv4
+      arista.eos.eos_command:
+        commands:
+          - show bgp vpn-ipv4 summary
+      register: bgp_check
+      when: inventory_hostname == 'clab-netops-p1' or node_role | default('') == 'pe'
+
+    - name: Vérifier le nombre de sessions BGP établies
+      ansible.builtin.assert:
+        that:
+          - >
+            (bgp_check.stdout[0] | regex_findall('Estab') | length)
+            == (3 if inventory_hostname == 'clab-netops-p1' else 1)
+        fail_msg: >-
+          {{ inventory_hostname }} : nombre de sessions MP-BGP établies incorrect.
+      when: inventory_hostname == 'clab-netops-p1' or node_role | default('') == 'pe'
+
+    - name: Afficher l'état des voisins BGP VPNv4
+      ansible.builtin.debug:
+        msg: "{{ bgp_check.stdout[0] }}"
+      when: inventory_hostname == 'clab-netops-p1' or node_role | default('') == 'pe'
+

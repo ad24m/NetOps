@@ -1,0 +1,2 @@
+ansible_connection: community.docker.docker
+ansible_docker_host: "{{ inventory_hostname }}"

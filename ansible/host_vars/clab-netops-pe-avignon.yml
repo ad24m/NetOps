@@ -9,4 +9,16 @@ ospf_interfaces:
   - name: Ethernet2
     address: 10.0.0.11/31
 expected_ospf_neighbors: 2
+bgp_rr_address: 10.255.0.11
 
+l3vpn_pe_ce_links:
+  - vrf: TENANT_1
+    interface: Ethernet3
+    ip: 10.1.0.5/30
+    neighbor_ip: 10.1.0.6
+    neighbor_as: 65102
+
+l3vpn_remote_routes:
+  - vrf: TENANT_1
+    prefix: 10.10.1.0/24
+    forbidden_prefix: "10.20."

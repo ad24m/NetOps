@@ -1,0 +1,34 @@
+---
+- name: Vérifier le sous-jacent MPLS et LDP
+  hosts: arista_ceos
+  gather_facts: false
+  any_errors_fatal: true
+
+  tasks:
+    - name: Lire les voisinages LDP et la table MPLS
+      arista.eos.eos_command:
+        commands:
+          - show mpls ldp neighbor
+          - show mpls route
+      register: ldp_check
+      when: node_role | default('') in ['p', 'pe']
+
+    - name: Afficher les voisinages LDP
+      ansible.builtin.debug:
+        msg: "{{ ldp_check.stdout[0] }}"
+      when: node_role | default('') in ['p', 'pe']
+
+    - name: Afficher la table de labels MPLS
+      ansible.builtin.debug:
+        msg: "{{ ldp_check.stdout[1] }}"
+      when: node_role | default('') in ['p', 'pe']
+
+    - name: Vérifier le nombre de voisinages LDP opérationnels
+      ansible.builtin.assert:
+        that:
+          - >
+            (ldp_check.stdout[0] | regex_findall('State: oper') | length)
+            == expected_ospf_neighbors
+        fail_msg: >-
+          {{ inventory_hostname }} : nombre de voisins LDP opérationnels incorrect.
+      when: node_role | default('') in ['p', 'pe']

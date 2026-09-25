@@ -1,0 +1,6 @@
+test_host_interface: eth1
+test_host_ip: 10.20.2.10/24
+ce_gateway: 10.20.2.1
+remote_lan: 10.20.1.0/24
+
+remote_test_ip: 10.20.1.10

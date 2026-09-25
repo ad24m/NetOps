@@ -1,0 +1,86 @@
+---
+- name: Configurer les liens clients et eBGP PE-CE
+  hosts: arista_ceos
+  gather_facts: false
+  any_errors_fatal: true
+
+  tasks:
+    - name: Activer le routage IPv4 sur les CE
+      arista.eos.eos_config:
+        lines:
+          - ip routing
+        save_when: changed
+      when: node_role | default('') == 'ce'
+
+    - name: Configurer le lien CE vers le PE
+      arista.eos.eos_config:
+        parents: "interface {{ ce_link_interface }}"
+        lines:
+          - no switchport
+          - "ip address {{ ce_link_ip }}"
+          - no shutdown
+        save_when: changed
+      when: node_role | default('') == 'ce'
+
+    - name: Configurer le LAN derrière chaque CE
+      arista.eos.eos_config:
+        parents: "interface {{ lan_interface }}"
+        lines:
+          - no switchport
+          - "ip address {{ lan_ip }}"
+          - no shutdown
+        save_when: changed
+      when: node_role | default('') == 'ce'
+
+    - name: Configurer les interfaces PE vers les CE
+      arista.eos.eos_config:
+        parents: "interface {{ item.interface }}"
+        lines:
+          - "ip address {{ item.ip }}"
+          - no shutdown
+        save_when: changed
+      loop: "{{ l3vpn_pe_ce_links | default([]) }}"
+      when: node_role | default('') == 'pe'
+
+    - name: Déclarer les voisins eBGP des PE dans leur VRF
+      arista.eos.eos_config:
+        parents:
+          - "router bgp {{ bgp_as }}"
+          - "vrf {{ item.vrf }}"
+        lines:
+          - "neighbor {{ item.neighbor_ip }} remote-as {{ item.neighbor_as }}"
+        save_when: changed
+      loop: "{{ l3vpn_pe_ce_links | default([]) }}"
+      when: node_role | default('') == 'pe'
+
+    - name: Activer IPv4 pour les voisins eBGP des PE
+      arista.eos.eos_config:
+        parents:
+          - "router bgp {{ bgp_as }}"
+          - "vrf {{ item.vrf }}"
+          - address-family ipv4
+        lines:
+          - "neighbor {{ item.neighbor_ip }} activate"
+        save_when: changed
+      loop: "{{ l3vpn_pe_ce_links | default([]) }}"
+      when: node_role | default('') == 'pe'
+
+    - name: Configurer BGP sur les CE
+      arista.eos.eos_config:
+        parents: "router bgp {{ customer_as }}"
+        lines:
+          - "router-id {{ customer_router_id }}"
+          - "neighbor {{ pe_neighbor_ip }} remote-as {{ pe_neighbor_as }}"
+        save_when: changed
+      when: node_role | default('') == 'ce'
+
+    - name: Annoncer le LAN du CE au PE
+      arista.eos.eos_config:
+        parents:
+          - "router bgp {{ customer_as }}"
+          - address-family ipv4
+        lines:
+          - "neighbor {{ pe_neighbor_ip }} activate"
+          - "network {{ lan_prefix }}"
+        save_when: changed
+      when: node_role | default('') == 'ce'

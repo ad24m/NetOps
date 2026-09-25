@@ -1,0 +1,10 @@
+node_role: ce
+customer_as: 65202
+customer_router_id: 10.2.0.6
+pe_neighbor_ip: 10.2.0.5
+pe_neighbor_as: 65000
+ce_link_interface: Ethernet1
+ce_link_ip: 10.2.0.6/30
+lan_interface: Ethernet2
+lan_ip: 10.20.2.1/24
+lan_prefix: 10.20.2.0/24

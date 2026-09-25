@@ -1,0 +1,58 @@
+---
+- name: Vérifier les sessions PE-CE et les routes des VRF
+  hosts: arista_ceos
+  gather_facts: false
+  any_errors_fatal: true
+
+  tasks:
+    - name: Lire les résumés BGP des voisins CE
+      arista.eos.eos_command:
+        commands:
+          - "show ip bgp summary vrf {{ item.vrf }}"
+      loop: "{{ l3vpn_pe_ce_links | default([]) }}"
+      register: pe_ce_summaries
+      changed_when: false
+      when: node_role | default('') == 'pe'
+
+    - name: Vérifier que les sessions PE-CE sont établies
+      ansible.builtin.assert:
+        that:
+          - "'Estab' in item.stdout[0]"
+          - "item.item.neighbor_ip in item.stdout[0]"
+        fail_msg: "Session BGP PE-CE non établie dans {{ item.item.vrf }}"
+        success_msg: "Session établie dans {{ item.item.vrf }} avec {{ item.item.neighbor_ip }}"
+      loop: "{{ pe_ce_summaries.results | default([]) }}"
+      when: node_role | default('') == 'pe'
+
+    - name: Lire les routes des VRF
+      arista.eos.eos_command:
+        commands:
+          - "show ip route vrf {{ item.vrf }}"
+      loop: "{{ l3vpn_remote_routes | default([]) }}"
+      register: vrf_routes
+      changed_when: false
+      when: node_role | default('') == 'pe'
+
+    - name: Vérifier la route distante et l'isolation des tenants
+      ansible.builtin.assert:
+        that:
+          - "item.item.prefix in item.stdout[0]"
+          - "'B I' in item.stdout[0]"
+          - "item.item.forbidden_prefix not in item.stdout[0]"
+        fail_msg: "Route VPN absente ou préfixe d'un autre tenant détecté dans {{ item.item.vrf }}"
+        success_msg: "Route distante présente et isolation vérifiée dans {{ item.item.vrf }}"
+      loop: "{{ vrf_routes.results | default([]) }}"
+      when: node_role | default('') == 'pe'
+
+- name: Vérifier le trafic entre les hôtes d'un même tenant
+  hosts: linux
+  gather_facts: false
+  any_errors_fatal: true
+
+  tasks:
+    - name: Pinguer l'hôte distant du même tenant
+      ansible.builtin.raw: "ping -c 3 {{ remote_test_ip }}"
+      register: ping_result
+      changed_when: false
+      failed_when: ping_result.rc != 0
+

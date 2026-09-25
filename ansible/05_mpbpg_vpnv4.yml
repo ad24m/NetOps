@@ -1,0 +1,66 @@
+---
+- name: Configurer MP-BGP VPNv4 et le Route Reflector
+  hosts: arista_ceos
+  gather_facts: false
+  any_errors_fatal: true
+
+  tasks:
+    - name: Créer le processus BGP sur p1 et les PE
+      arista.eos.eos_config:
+        parents: "router bgp {{ bgp_as }}"
+        lines:
+          - "router-id {{ router_id }}"
+        save_when: changed
+      when: inventory_hostname == 'clab-netops-p1' or node_role | default('') == 'pe'
+
+
+    - name: Déclarer les PE comme voisins iBGP de p1
+      arista.eos.eos_config:
+        parents: "router bgp {{ bgp_as }}"
+        lines:
+          - "neighbor {{ item }} remote-as {{ bgp_as }}"
+          - "neighbor {{ item }} update-source Loopback0"
+          - "neighbor {{ item }} send-community extended"
+        save_when: changed
+      loop: "{{ bgp_rr_clients | default([]) }}"
+      when: bgp_rr_clients is defined
+
+    - name: Activer VPNv4 et le rôle Route Reflector sur p1
+      arista.eos.eos_config:
+        parents:
+          - "router bgp {{ bgp_as }}"
+          - "address-family vpn-ipv4"
+        lines:
+          - "neighbor {{ item }} activate"
+          - "neighbor {{ item }} route-reflector-client"
+        save_when: changed
+      loop: "{{ bgp_rr_clients | default([]) }}"
+      when: bgp_rr_clients is defined
+
+    - name: Déclarer p1 comme voisin iBGP des PE
+      arista.eos.eos_config:
+        parents: "router bgp {{ bgp_as }}"
+        lines:
+          - "neighbor {{ bgp_rr_address }} remote-as {{ bgp_as }}"
+          - "neighbor {{ bgp_rr_address }} update-source Loopback0"
+          - "neighbor {{ bgp_rr_address }} send-community extended"
+        save_when: changed
+      when: node_role | default('') == 'pe'
+
+    - name: Activer VPNv4 sur les PE
+      arista.eos.eos_config:
+        parents:
+          - "router bgp {{ bgp_as }}"
+          - "address-family vpn-ipv4"
+        lines:
+          - "neighbor {{ bgp_rr_address }} activate"
+          - "neighbor default encapsulation mpls next-hop-self source-interface Loopback0"
+        save_when: changed
+      when: node_role | default('') == 'pe'
+
+    - name: Retirer le processus BGP inutile de p2
+      arista.eos.eos_config:
+        lines:
+          - "no router bgp {{ bgp_as }}"
+        save_when: changed
+      when: inventory_hostname == 'clab-netops-p2'
