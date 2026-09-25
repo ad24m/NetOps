@@ -1,0 +1,62 @@
+!
+ip routing
+!
+router ospf {{ ospf_process_id }}
+   router-id {{ router_id }}
+!
+interface Loopback0
+   ip address {{ loopback0 }}
+   ip ospf area {{ ospf_area }}
+{% for intf in ospf_interfaces %}
+!
+interface {{ intf.name }}
+   no switchport
+   ip address {{ intf.address }}
+   ip ospf area {{ ospf_area }}
+{% endfor %}
+!
+mpls ip
+!
+mpls ldp
+   router-id interface Loopback0
+   no shutdown
+!
+{% for vrf in pe_vrfs %}
+vrf instance {{ vrf.name }}
+ip routing vrf {{ vrf.name }}
+!
+{% endfor %}
+{% for link in l3vpn_pe_ce_links %}
+interface {{ link.interface }}
+   no switchport
+   vrf {{ link.vrf }}
+   ip address {{ link.ip }}
+   no shutdown
+!
+{% endfor %}
+router bgp {{ bgp_as }}
+   router-id {{ router_id }}
+   neighbor {{ bgp_rr_address }} remote-as {{ bgp_as }}
+   neighbor {{ bgp_rr_address }} update-source Loopback0
+   neighbor {{ bgp_rr_address }} send-community extended
+   !
+   address-family vpn-ipv4
+      neighbor {{ bgp_rr_address }} activate
+      neighbor default encapsulation mpls next-hop-self source-interface Loopback0
+   !
+{% for vrf in pe_vrfs %}
+   vrf {{ vrf.name }}
+      rd {{ vrf.rd }}
+      route-target import vpn-ipv4 {{ vrf.rt }}
+      route-target export vpn-ipv4 {{ vrf.rt }}
+{% for link in l3vpn_pe_ce_links %}
+{% if link.vrf == vrf.name %}
+      neighbor {{ link.neighbor_ip }} remote-as {{ link.neighbor_as }}
+      !
+      address-family ipv4
+         neighbor {{ link.neighbor_ip }} activate
+      !
+{% endif %}
+{% endfor %}
+{% endfor %}
+!

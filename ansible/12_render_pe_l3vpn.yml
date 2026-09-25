@@ -1,0 +1,18 @@
+---
+- name: Rendre la configuration complète du PE Paris sans l'appliquer
+  hosts: arista_ceos
+  gather_facts: false
+
+  tasks:
+    - name: Créer le répertoire de rendu sur le contrôleur
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/rendered"
+        state: directory
+      delegate_to: localhost
+      run_once: true
+
+    - name: Générer le fichier de configuration du PE
+      ansible.builtin.template:
+        src: templates/pe_l3vpn.j2
+        dest: "{{ playbook_dir }}/rendered/{{ inventory_hostname }}-l3vpn.cfg"
+      delegate_to: localhost

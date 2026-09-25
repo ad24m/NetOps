@@ -22,3 +22,9 @@ l3vpn_remote_routes:
   - vrf: TENANT_2
     prefix: 10.20.1.0/24
     forbidden_prefix: "10.10."
+
+pe_vrfs:
+  - name: TENANT_2
+    interface: Ethernet3
+    rd: "65000:202"
+    rt: "65000:2"

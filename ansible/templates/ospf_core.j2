@@ -1,0 +1,17 @@
+!
+ip routing
+!
+router ospf {{ ospf_process_id }}
+   router-id {{ router_id }}
+!
+interface Loopback0
+   ip address {{ loopback0 }}
+   ip ospf area {{ ospf_area }}
+{% for intf in ospf_interfaces %}
+!
+interface {{ intf.name }}
+   no switchport
+   ip address {{ intf.address }}
+   ip ospf area {{ ospf_area }}
+{% endfor %}
+!

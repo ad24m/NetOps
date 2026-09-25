@@ -1,0 +1,17 @@
+---
+- name: Rendre la configuration OSPF de p1 sans l'appliquer
+  hosts: arista_ceos
+  gather_facts: false
+
+  tasks:
+    - name: Créer le répertoire de rendu sur le contrôleur
+      ansible.builtin.file:
+        path: "{{ playbook_dir }}/rendered"
+        state: directory
+      delegate_to: localhost
+
+    - name: Générer le fichier de configuration OSPF de p1
+      ansible.builtin.template:
+        src: templates/ospf_core.j2
+        dest: "{{ playbook_dir }}/rendered/{{ inventory_hostname }}-ospf.cfg"
+      delegate_to: localhost
