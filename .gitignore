@@ -2,3 +2,5 @@ clab-netops/
 *.bak
 README.md
 README.md
+
+observability/gnmic/gnmic.env

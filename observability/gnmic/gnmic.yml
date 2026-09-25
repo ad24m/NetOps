@@ -1,0 +1,51 @@
+username: admin
+password: ${GNMIC_PASSWORD}
+insecure: true
+log: true
+log-format: text
+
+targets:
+  p1:
+    address: 172.20.20.11:6030
+    subscriptions: [interface-counters]
+  p2:
+    address: 172.20.20.12:6030
+    subscriptions: [interface-counters]
+  pe-paris:
+    address: 172.20.20.21:6030
+    subscriptions: [interface-counters]
+  pe-avignon:
+    address: 172.20.20.22:6030
+    subscriptions: [interface-counters]
+  pe-bordeaux:
+    address: 172.20.20.23:6030
+    subscriptions: [interface-counters]
+  ce-paris-a:
+    address: 172.20.20.31:6030
+    subscriptions: [interface-counters]
+  ce-avignon:
+    address: 172.20.20.32:6030
+    subscriptions: [interface-counters]
+  ce-paris-b:
+    address: 172.20.20.33:6030
+    subscriptions: [interface-counters]
+  ce-bordeaux:
+    address: 172.20.20.34:6030
+    subscriptions: [interface-counters]
+
+subscriptions:
+  interface-counters:
+    paths:
+      - /interfaces/interface/state/counters/in-octets
+      - /interfaces/interface/state/counters/out-octets
+    mode: STREAM
+    stream-mode: SAMPLE
+    sample-interval: 30s
+    encoding: JSON_IETF
+
+outputs:
+  prometheus:
+    type: prometheus
+    listen: :9804
+    path: /metrics
+    expiration: 90s

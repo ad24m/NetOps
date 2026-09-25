@@ -1,0 +1,19 @@
+[Unit]
+Description=gNMIc telemetry collector
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=NetOps
+WorkingDirectory=/home/NetOps/NetOps
+EnvironmentFile=/home/NetOps/NetOps/observability/gnmic/gnmic.env
+ExecStart=/usr/local/bin/gnmic --config /home/NetOps/NetOps/observability/gnmic/gnmic.yml subscribe
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=gnmic
+
+[Install]
+WantedBy=multi-user.target
